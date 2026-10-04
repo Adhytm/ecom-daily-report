@@ -1,0 +1,111 @@
+# 京东（京东商智）适配器 —— 口径设定见规划 5.4
+# 关键口径差异：gmv_basis=ordered（下单口径）、gmv_includes_shipping=true（GMV 含运费），
+# 京东 GMV 与其他平台不可直接相加比较，导出与看板需显式提示
+adapter_version: 1
+platform_key: jd
+display_name: 京东（京东商智）
+
+file_matching:
+  extensions: [.csv, .xlsx, .xlsm, .xls, .tsv, .txt]
+  encoding_candidates: [utf-8, utf-8-sig, gb18030]
+  header_row: auto
+  auto_header_hints: ["商品编号", "下单金额", "日期"]
+  skip_footer: 0
+  detect_keywords: ["京东", "商智", "商品编号", "下单金额", "京准通"]
+  detect_weight: 1.0
+
+column_map:
+  "日期": stat_date
+  "店铺名称": shop_name
+  "商品编号": platform_product_code
+  "商品名称": product_name
+  "一级分类": category
+  "下单金额": gmv
+  "付款件数": paid_qty
+  "下单件数": order_qty
+  "退款金额": refund_amount
+  "访客数": visitors
+  "付款人数": buyers
+  "快车花费": ad_cost
+
+column_aliases:
+  stat_date: ["统计日期", "统计时间"]
+  gmv: ["商品下单金额", "下单金额(含运费)"]
+  paid_qty: ["支付件数", "商品件数"]
+  order_qty: ["商品下单件数"]
+  buyers: ["支付买家数", "付款新买家数"]
+  visitors: ["商品访客数", "UV"]
+  category: ["一级类目"]
+  ad_cost: ["京准通花费", "推广花费"]
+
+required_columns: [stat_date, platform_product_code, gmv]
+optional_columns: [shop_name, product_name, category, paid_qty,
+                   refund_amount, visitors, buyers, ad_cost, order_qty]
+
+transforms:
+  stat_date:
+    type: datetime
+    formats: ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%Y/%m/%d", "%Y%m%d"]
+    truncate_to: day
+  gmv:
+    type: money
+    strip_chars: [",", "￥", "¥", " ", "\t", "元"]
+    unit: yuan
+    default: "0"
+  refund_amount:
+    type: money
+    strip_chars: [",", "￥", "¥", " "]
+    unit: yuan
+    default: "0"
+  paid_qty:
+    type: integer
+    strip_chars: [",", "件"]
+    default: "0"
+  order_qty:
+    type: integer
+    strip_chars: [",", "件"]
+    default: null
+  visitors:
+    type: integer
+    strip_chars: [","]
+    default: null
+  buyers:
+    type: integer
+    strip_chars: [","]
+    default: null
+  ad_cost:
+    type: money
+    strip_chars: [",", "￥", "¥", " "]
+    unit: yuan
+    default: "0"
+  platform_product_code:
+    type: string
+    strip_chars: [" ", "\t", "'"]
+    trim: true
+
+metric_semantics:
+  gmv_basis: ordered
+  gmv_includes_shipping: true
+  gmv_includes_tax: false
+  refund_handling: separate
+  net_amount_formula: "gmv - refund_amount"
+  timezone: Asia/Shanghai
+  grain: sku_day
+  # 平台扣点比例（0.05 = 5%）。0 = 利润不含扣点；京东按类目差异大，按实填写
+  platform_fee_rate: 0
+  # 单件履约成本（快递 + 包材，元/件）。0 = 不计入利润
+  fulfillment_cost_per_unit: 0
+
+row_filters:
+  - column: stat_date
+    op: not_null
+  - column: gmv
+    op: numeric
+  - column: product_name
+    op: not_contains
+    values: ["测试", "赠品"]
+
+dedup:
+  enabled: true
+  keys: [stat_date, platform_key, platform_product_code, shop_code]
+  strategy: sum

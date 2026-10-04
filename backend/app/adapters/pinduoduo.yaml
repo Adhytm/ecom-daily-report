@@ -1,0 +1,104 @@
+# 拼多多（商家后台）适配器 —— 口径设定见规划 5.4
+# 拼多多后台导出为 xlsx；导出文件末尾常附 2 行汇总说明文字（skip_footer 丢弃）
+adapter_version: 1
+platform_key: pinduoduo
+display_name: 拼多多（商家后台）
+
+file_matching:
+  extensions: [.csv, .xlsx, .xlsm, .xls, .tsv, .txt]
+  encoding_candidates: [utf-8-sig, utf-8, gb18030]
+  header_row: auto
+  auto_header_hints: ["商品ID", "商品名称", "统计日期"]
+  skip_footer: 2
+  detect_keywords: ["拼多多", "成团", "多多", "统计日期", "商品ID"]
+  detect_weight: 1.0
+
+column_map:
+  "统计日期": stat_date
+  "店铺名称": shop_name
+  "商品ID": platform_product_code
+  "商品名称": product_name
+  "商品一级类目": category
+  "成团金额(GMV)": gmv
+  "成团件数": paid_qty
+  "退款金额": refund_amount
+  "商品访客数": visitors
+  "成团买家数": buyers
+  "推广花费": ad_cost
+
+column_aliases:
+  stat_date: ["日期", "统计时间"]
+  gmv: ["支付GMV", "支付金额", "成团金额"]
+  paid_qty: ["支付件数", "成团商品件数"]
+  buyers: ["支付人数", "成团人数"]
+  visitors: ["访客数"]
+  category: ["一级类目"]
+  ad_cost: ["推广消耗", "推广费"]
+
+required_columns: [stat_date, platform_product_code, gmv]
+optional_columns: [shop_name, product_name, category, paid_qty,
+                   refund_amount, visitors, buyers, ad_cost, order_qty]
+
+transforms:
+  stat_date:
+    type: datetime
+    formats: ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%Y/%m/%d", "%Y%m%d"]
+    truncate_to: day
+  gmv:
+    type: money
+    strip_chars: [",", "￥", "¥", " ", "\t", "元"]
+    unit: yuan
+    default: "0"
+  refund_amount:
+    type: money
+    strip_chars: [",", "￥", "¥", " "]
+    unit: yuan
+    default: "0"
+  paid_qty:
+    type: integer
+    strip_chars: [",", "件"]
+    default: "0"
+  visitors:
+    type: integer
+    strip_chars: [","]
+    default: null
+  buyers:
+    type: integer
+    strip_chars: [","]
+    default: null
+  ad_cost:
+    type: money
+    strip_chars: [",", "￥", "¥", " "]
+    unit: yuan
+    default: "0"
+  platform_product_code:
+    type: string
+    strip_chars: [" ", "\t", "'"]
+    trim: true
+
+metric_semantics:
+  gmv_basis: paid
+  gmv_includes_shipping: false
+  gmv_includes_tax: false
+  refund_handling: separate
+  net_amount_formula: "gmv - refund_amount"
+  timezone: Asia/Shanghai
+  grain: sku_day
+  # 平台扣点比例（0.05 = 5%）。0 = 利润不含扣点；拼多多基础技术服务费约 0.6%，按实填写
+  platform_fee_rate: 0
+  # 单件履约成本（快递 + 包材，元/件）。0 = 不计入利润
+  fulfillment_cost_per_unit: 0
+
+row_filters:
+  - column: stat_date
+    op: not_null
+  - column: gmv
+    op: numeric
+  - column: product_name
+    op: not_contains
+    values: ["测试", "赠品"]
+
+dedup:
+  enabled: true
+  keys: [stat_date, platform_key, platform_product_code, shop_code]
+  strategy: sum

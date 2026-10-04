@@ -1,0 +1,23 @@
+# 后端依赖清单（固定主版本号）
+# 注意：numpy 规格原定 ^1.26，但当前环境为 Python 3.14，numpy 1.26 无对应发行包，
+# 故调整至 numpy 2.x（pandas 2.3 兼容），属环境约束下的必要偏差。
+fastapi>=0.110,<1.0
+uvicorn>=0.27,<1.0
+pandas>=2.2,<3.0
+numpy>=2.0,<3.0
+openpyxl>=3.1,<4.0
+PyYAML>=6.0,<7.0
+pydantic>=2.6,<3.0
+pydantic-settings>=2.2,<3.0
+SQLAlchemy>=2.0,<3.0
+charset-normalizer>=3.3,<4.0
+rapidfuzz>=3.6,<4.0
+# python-multipart 为 FastAPI 处理 multipart 文件上传（UploadFile）的必需配套组件
+python-multipart>=0.0.9
+# 测试（规划 10.1 要求 pytest --cov）
+pytest>=8.0
+pytest-asyncio>=0.23
+pytest-cov>=4.1
+httpx>=0.27
+# .xls 老式 BIFF 格式读取（xlrd 2.x 仅支持 .xls，不再支持 .xlsx，与本项目无冲突）
+xlrd>=2.0.1,<3.0

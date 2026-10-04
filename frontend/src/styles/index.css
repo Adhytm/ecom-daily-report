@@ -1,0 +1,259 @@
+/* ==========================================================================
+   设计系统：多平台电商销售日报
+   单一事实来源 —— 色彩 / 字体层级 / 圆角 / 阴影 / 间距 / 状态色。
+   组件内只允许引用这里的变量，禁止再写魔法数字与硬编码 hex。
+   ========================================================================== */
+
+:root {
+  /* ---- 品牌主色（商务藏青）及其完整梯度。
+     Element Plus 预编译 CSS 的 light-N 梯度是按默认蓝 #409eff 生成的，
+     只覆盖 --el-color-primary 不换梯度会导致 hover/浅底仍泛蓝光，
+     必须整套对齐 ---- */
+  --el-color-primary: #1f4e79;
+  --el-color-primary-light-3: #6283a1;
+  --el-color-primary-light-5: #8fa6bc;
+  --el-color-primary-light-7: #bccad7;
+  --el-color-primary-light-8: #d2dce5;
+  --el-color-primary-light-9: #e9eef3;
+  --el-color-primary-dark-2: #193e61;
+
+  /* ---- 状态色（中国市场惯例：红涨绿跌） ---- */
+  --color-up: #d4380d;            /* 上涨 / 增长：红 */
+  --color-down: #00875a;          /* 下跌 / 下降：绿 */
+  --color-warn: #d48806;          /* 关注 / 预警 */
+  --color-up-soft: rgba(212, 56, 13, 0.08);
+  --color-down-soft: rgba(0, 135, 90, 0.08);
+
+  /* ---- 字体层级（只允许这 6 级） ---- */
+  --text-xs: 12px;    /* 辅助说明、标签 */
+  --text-sm: 13px;    /* 次级正文、表格 */
+  --text-md: 14px;    /* 正文 */
+  --text-lg: 16px;    /* 区块标题 */
+  --text-xl: 20px;    /* 页面级大数字 */
+  --text-2xl: 26px;   /* 核心指标大数字 */
+
+  /* ---- 圆角（只允许这 3 级） ---- */
+  --radius-sm: 6px;   /* 标签、胶囊、小控件 */
+  --radius-md: 10px;  /* 输入框、按钮、小卡片 */
+  --radius-lg: 14px;  /* 页面级卡片、弹窗 */
+
+  /* ---- 阴影（克制，只服务层级） ---- */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 2px 8px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 8px 24px rgba(15, 23, 42, 0.10), 0 2px 6px rgba(15, 23, 42, 0.05);
+  --shadow-hover: 0 6px 16px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.04);
+
+  /* ---- 页面背景：柔和但有层次的浅灰蓝 ---- */
+  --app-bg: #f5f7fa;
+  --app-bg-accent: radial-gradient(1200px 500px at 80% -10%, rgba(31, 78, 121, 0.05), transparent 60%);
+
+  /* ---- 动效 ---- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 0.15s;
+  --dur-med: 0.25s;
+
+  /* ---- Element Plus 基础对齐 ---- */
+  --el-border-radius-base: var(--radius-sm);
+  --el-border-radius-small: 4px;
+  --el-border-radius-round: 999px;
+  --el-font-size-base: var(--text-md);
+  --el-box-shadow: var(--shadow-md);
+  --el-box-shadow-light: var(--shadow-sm);
+  --el-box-shadow-lighter: var(--shadow-sm);
+  --el-box-shadow-dark: var(--shadow-lg);
+}
+
+html.dark {
+  --el-color-primary: #5b9bd5;
+  --el-color-primary-light-3: #3f6d96;
+  --el-color-primary-light-5: #2c4f6e;
+  --el-color-primary-light-7: #1e3549;
+  --el-color-primary-light-8: #182a3a;
+  --el-color-primary-light-9: #12202d;
+  --el-color-primary-dark-2: #7cb3e0;
+
+  --color-up: #ff7a59;
+  --color-down: #4ecb94;
+  --color-warn: #e8b339;
+  --color-up-soft: rgba(255, 122, 89, 0.12);
+  --color-down-soft: rgba(78, 203, 148, 0.12);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.35);
+  --shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
+
+  --app-bg: #14171c;
+  --app-bg-accent: radial-gradient(1200px 500px at 80% -10%, rgba(91, 155, 213, 0.08), transparent 60%);
+}
+
+/* ==========================================================================
+   全局基础
+   ========================================================================== */
+
+body {
+  margin: 0;
+  font-family: "Helvetica Neue", "PingFang SC", "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+  font-size: var(--text-md);
+  line-height: 1.6;
+  background-color: var(--app-bg);
+  color: var(--el-text-color-primary);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color var(--dur-med) var(--ease-out), color var(--dur-med) var(--ease-out);
+}
+
+/* 数字统一等宽，金额/比率对齐才不跳 */
+.num, .el-table .cell {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 克制的滚动条 */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.28);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.45); }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* 页面背景层次（极淡的品牌色晕染，不是噱头渐变） */
+#app {
+  min-height: 100vh;
+  background: var(--app-bg);
+  background-image: var(--app-bg-accent);
+}
+
+/* ==========================================================================
+   Element Plus 全局覆写 —— 组件一致性从这里来
+   ========================================================================== */
+
+/* ---- 卡片：统一大圆角 + 细边框 + 无默认阴影，hover 不浮夸 ---- */
+.el-card {
+  --el-card-border-color: var(--el-border-color-lighter);
+  --el-card-border-radius: var(--radius-lg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--dur-med) var(--ease-out);
+}
+.el-card__header {
+  padding: 14px 20px;
+  font-size: var(--text-md);
+  font-weight: 600;
+  border-bottom: 1px solid var(--el-border-color-extra-light);
+}
+.el-card__body { padding: 18px 20px; }
+
+/* ---- 按钮：统一圆角与字重，主按钮阴影克制 ---- */
+.el-button {
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  transition: all var(--dur-fast) var(--ease-out);
+}
+.el-button--large { border-radius: var(--radius-md); }
+.el-button--primary:not(.is-link):not(.is-text) {
+  box-shadow: 0 1px 3px rgba(31, 78, 121, 0.25);
+}
+html.dark .el-button--primary:not(.is-link):not(.is-text) {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+.el-button:not(.is-link):not(.is-text):hover {
+  transform: translateY(-1px);
+}
+.el-button:not(.is-link):not(.is-text):active {
+  transform: translateY(0);
+}
+
+/* ---- 表格：清爽表头、合适的行高、hover 柔和 ---- */
+.el-table {
+  --el-table-header-bg-color: var(--el-fill-color-light);
+  --el-table-border-color: var(--el-border-color-extra-light);
+  --el-table-row-hover-bg-color: var(--el-fill-color);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+.el-table th.el-table__cell {
+  font-weight: 600;
+  color: var(--el-text-color-regular);
+}
+.el-table .el-table__cell { padding: 9px 0; }
+
+/* ---- 输入与选择器 ---- */
+.el-input__wrapper,
+.el-select__wrapper {
+  border-radius: var(--radius-sm);
+  transition: box-shadow var(--dur-fast) var(--ease-out);
+}
+
+/* ---- 弹窗与抽屉 ---- */
+.el-dialog {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+.el-dialog__title { font-size: var(--text-lg); font-weight: 600; }
+.el-drawer__header {
+  margin-bottom: 12px;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+.el-message-box {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ---- Tabs：现代下划线风格 ---- */
+.el-tabs__item {
+  font-size: var(--text-md);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+.el-tabs__nav-wrap::after { height: 1px; }
+
+/* ---- 标签 ---- */
+.el-tag { border-radius: var(--radius-sm); font-weight: 500; }
+
+/* ---- 消息提示 ---- */
+.el-message {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+.el-notification {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ---- 下拉菜单 ---- */
+.el-dropdown-menu, .el-select-dropdown {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ---- 空状态 ---- */
+.el-empty__description p { font-size: var(--text-sm); }
+
+/* ---- 分页 ---- */
+.el-pagination { font-size: var(--text-sm); }
+
+/* ==========================================================================
+   通用工具类（跨页面复用，避免每个页面重复实现）
+   ========================================================================== */
+
+/* 涨跌状态：红涨绿跌，全站唯一出处 */
+.delta-up, .factor-up, .f-up { color: var(--color-up) !important; font-weight: 600; }
+.delta-down, .factor-down, .f-down { color: var(--color-down) !important; font-weight: 600; }
+.delta-none { color: var(--el-text-color-placeholder); }
+.factor-warn { color: var(--color-warn); font-weight: 600; }
+
+/* 页面容器：统一最大宽度与间距节奏 */
+.page-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 页面切换微动效：轻量上浮淡入，不喧宾夺主 */
+.fade-slide-enter-active { transition: opacity var(--dur-med) var(--ease-out), transform var(--dur-med) var(--ease-out); }
+.fade-slide-enter-from { opacity: 0; transform: translateY(6px); }
+.fade-slide-leave-active { transition: opacity var(--dur-fast) var(--ease-out); }
+.fade-slide-leave-to { opacity: 0; }

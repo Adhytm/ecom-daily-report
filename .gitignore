@@ -1,0 +1,53 @@
+# ============================================================
+# 多平台电商销售日报生成器 —— 忽略规则
+# 原则：只提交「源码 + 文档 + 可随时重建的样例输入」，
+#       一切运行产物、测试产物、本机调试痕迹、环境快照都不入库。
+# ============================================================
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# ---------- 测试与调试产物 ----------
+# JUnit XML 测试报告（pytest --junitxml 生成，路径在本机任意位置）
+*.xml
+# pytest basetemp / 临时工作目录
+.pytest_tmp/
+# 沙箱 ACL 诊断产物：含本机磁盘绝对路径与 Windows 用户 SID，绝不可外泄
+.regression_probe/
+
+# ---------- 本地运行与演示产物 ----------
+# 运行时数据（规划第 3 节：data/ 运行时生成）
+data/
+!data/.gitkeep
+# 演示跑批产物（含 app.db、导出的 xlsx）
+.demo_run/
+# 模拟生成文件（可随时重新生成）
+samples/mock/
+
+# ---------- 内部工具痕迹（与项目本身无关）----------
+# AI 编码工具的草稿、截图、日志（可能是其它项目的调试残留）
+.qoder-tmp/
+# AI 编码工具的项目记忆 / 决策记录（内部笔记，不适合公开）
+.workbuddy/
+
+# ---------- 前端 ----------
+node_modules/
+frontend/dist/
+backend/app/static/
+!backend/app/static/.gitkeep
+# Vite 依赖预构建时落下的临时配置快照
+frontend/vite.config.js.timestamp-*
+
+# ---------- 编辑器 / 系统 ----------
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store

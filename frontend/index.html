@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 页签图标：内联 SVG，与侧边栏 logo 的上升折线一致。
+         原先没有 favicon.ico：浏览器的 /favicon.ico 请求会被 SPA 兜底路由
+         用 index.html 应答（200 + text/html），浏览器拿不到图标只能显示默认
+         占位图，页签看起来"没牌子"。内联 data URI 不产生额外请求。 -->
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23409EFF'/%3E%3Cpath d='M14 44 L26 30 L36 37 L50 19' fill='none' stroke='white' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <title>多平台电商销售日报</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

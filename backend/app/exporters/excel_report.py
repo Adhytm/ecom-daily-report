@@ -96,6 +96,8 @@ def _write_table(ws, start_row: int, headers: list[str], rows: list[list],
                     cell.value = v
                     cell.number_format = fmt or FMT_PCT_SIGNED
             else:
+                if isinstance(v, str) and v and v[0] in ("=", "+", "-", "@"):
+                    v = "'" + v
                 cell.value = v if v is not None else "—"
                 _data_style(cell, banded)
                 if fmt and v is not None:

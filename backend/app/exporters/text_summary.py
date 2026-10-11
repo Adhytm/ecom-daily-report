@@ -121,9 +121,11 @@ def generate_text_summary(report: dict, company: str | None = None,
     for row in report["by_platform"]:
         m = row["metrics"]
         mark = marks.get(row["name"], "")
+        net_dod = m.get("net_amount", {}).get("dod")
+        dod_val = net_dod if net_dod is not None else m.get("gmv", {}).get("dod")
         platform_lines.append(
             f"· {row['name']} {_fmt_money(m['net_amount']['value'])}"
-            f"（环比 {_fmt_delta(m['gmv']['dod'])}）{mark}"
+            f"（环比 {_fmt_delta(dod_val)}）{mark}"
         )
     lines.append("◆ 分平台")
     lines.extend(platform_lines)

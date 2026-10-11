@@ -117,7 +117,19 @@ def _dsum0(facts: list[dict], key: str) -> Decimal:
 
 def _gp_sum(facts: list[dict]) -> Decimal | None:
     """毛利求和：只累加成本已知的行；无一行已知 → None（宁缺毋虚报）。"""
-    vals = [f["_gp"] for f in facts if f["_gp"] is not None]
+    vals = [f["_gp"] for f in facts if f.get("_gp") is not None]
+    if not vals:
+        return None
+    return sum(vals, _ZERO)
+
+
+def _covered_net_sum(facts: list[dict]) -> Decimal | None:
+    """已核算成本商品的成交额求和（作为毛利率分母，杜绝大盘全量成交稀释毛利率）。"""
+    vals = [
+        Decimal(str(f["net_amount"]))
+        for f in facts
+        if f.get("_gp") is not None and f.get("net_amount") is not None
+    ]
     if not vals:
         return None
     return sum(vals, _ZERO)
@@ -171,14 +183,19 @@ def get_weekly_data(db: Session, date_str: str) -> dict[str, Any]:
     cur_net = _dsum0(cur_facts, "net_amount")
     cur_refund = _dsum0(cur_facts, "refund_amount")
     cur_paid = _dsum0(cur_facts, "paid_qty")
+    cur_buyers = _dsum0(cur_facts, "buyers")
     cur_ad = _dsum0(cur_facts, "ad_cost")
     cur_gross_profit = _gp_sum(cur_facts)
+    cur_covered_net = _covered_net_sum(cur_facts)
 
     cur_refund_rate = _safe_div(cur_refund, cur_gmv)
     cur_gross_margin = (
-        _safe_div(cur_gross_profit, cur_net) if cur_gross_profit is not None else None
+        _safe_div(cur_gross_profit, cur_covered_net)
+        if cur_gross_profit is not None and cur_covered_net is not None
+        else None
     )
-    cur_aov = _safe_div(cur_net, cur_paid)
+    # 客单价 (AOV) 优先按支付买家数核算；若买家数为空或0则退化为件单价（与统一规范一致）
+    cur_aov = _safe_div(cur_net, cur_buyers) if cur_buyers > 0 else _safe_div(cur_net, cur_paid)
     cur_roi = _safe_div(cur_net, cur_ad)
 
     # 上周各项汇总
@@ -186,14 +203,18 @@ def get_weekly_data(db: Session, date_str: str) -> dict[str, Any]:
     prev_net = _dsum0(prev_facts, "net_amount")
     prev_refund = _dsum0(prev_facts, "refund_amount")
     prev_paid = _dsum0(prev_facts, "paid_qty")
+    prev_buyers = _dsum0(prev_facts, "buyers")
     prev_ad = _dsum0(prev_facts, "ad_cost")
     prev_gross_profit = _gp_sum(prev_facts)
+    prev_covered_net = _covered_net_sum(prev_facts)
 
     prev_refund_rate = _safe_div(prev_refund, prev_gmv)
     prev_gross_margin = (
-        _safe_div(prev_gross_profit, prev_net) if prev_gross_profit is not None else None
+        _safe_div(prev_gross_profit, prev_covered_net)
+        if prev_gross_profit is not None and prev_covered_net is not None
+        else None
     )
-    prev_aov = _safe_div(prev_net, prev_paid)
+    prev_aov = _safe_div(prev_net, prev_buyers) if prev_buyers > 0 else _safe_div(prev_net, prev_paid)
     prev_roi = _safe_div(prev_net, prev_ad)
 
     # 周环比
@@ -228,8 +249,11 @@ def get_weekly_data(db: Session, date_str: str) -> dict[str, Any]:
         d_net = _dsum0(day_facts, "net_amount")
         d_ref = _dsum0(day_facts, "refund_amount")
         d_paid = _dsum0(day_facts, "paid_qty")
+        d_buyers = _dsum0(day_facts, "buyers")
         d_gp = _gp_sum(day_facts)
+        d_cov_net = _covered_net_sum(day_facts)
         d_ad = _dsum0(day_facts, "ad_cost")
+        d_aov = _safe_div(d_net, d_buyers) if d_buyers > 0 else _safe_div(d_net, d_paid)
 
         daily_breakdown.append({
             "date": cur_day.isoformat(),
@@ -239,10 +263,10 @@ def get_weekly_data(db: Session, date_str: str) -> dict[str, Any]:
             "refund_rate": _f4(_safe_div(d_ref, d_gmv)),
             "gross_profit": _f2(d_gp),
             "gross_margin": (
-                _f4(_safe_div(d_gp, d_net)) if d_gp is not None else None
+                _f4(_safe_div(d_gp, d_cov_net)) if d_gp is not None and d_cov_net is not None else None
             ),
             "paid_qty": int(d_paid),
-            "avg_order_value": _f2(_safe_div(d_net, d_paid)),
+            "avg_order_value": _f2(d_aov),
             "roi": _f2(_safe_div(d_net, d_ad)),
         })
 

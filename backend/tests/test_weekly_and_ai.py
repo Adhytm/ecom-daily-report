@@ -95,3 +95,79 @@ def test_ai_diagnose_cloud_requires_key(client):
     resp = client.post("/api/ai/diagnose", json={"date": "2026-09-02", "provider": "cloud"})
     assert resp.status_code == 400
     assert resp.json()["error"]["code"] == "AI_KEY_REQUIRED"
+
+
+def test_build_diagnosis_context_with_anomalies_and_top_items():
+    from backend.app.schemas.report import DailyReportData
+    from backend.app.services.ai_service import build_diagnosis_context
+
+    raw_data = {
+        "report_date": "2026-09-02",
+        "weekday": "周三",
+        "compare_dates": {"yesterday": "2026-09-01"},
+        "data_completeness": {"expected_platforms": ["taobao"], "present_platforms": ["taobao"], "cost_coverage": 1.0},
+        "overview": {
+            "gmv": {"value": 10000.0, "dod": 0.12},
+            "net_amount": {"value": 9000.0, "dod": 0.10},
+            "refund_rate": {"value": 0.10, "dod_pp": 0.5},
+            "gross_profit": {"value": 5000.0},
+            "gross_margin": {"value": 0.55},
+            "operating_profit": {"value": 4500.0},
+            "paid_qty": {"value": 100.0},
+            "avg_order_value": {"value": 90.0},
+            "visitors": {"value": 2000.0},
+            "conversion_rate": {"value": 0.05},
+            "roi": {"value": 9.0},
+        },
+        "by_platform": [
+            {
+                "key": "taobao",
+                "name": "天猫淘宝",
+                "share": 1.0,
+                "metrics": {"gmv": {"value": 10000.0, "dod": 0.12}, "refund_rate": {"value": 0.10}},
+            }
+        ],
+        "by_shop": [],
+        "by_category": [],
+        "by_sku": {"mapped": [], "unmapped": []},
+        "trend": {"dates": [], "series": {}},
+        "top": {
+            "by_gmv": [],
+            "by_growth": [
+                {"name": "热销面霜", "sku_code": "SKU01", "gmv": 5000.0, "gmv_dod": 0.35, "net_amount": 4500.0, "refund_rate": 0.1}
+            ],
+            "by_decline": [
+                {"name": "滞销眼影", "sku_code": "SKU02", "gmv": 1200.0, "gmv_dod": -0.45, "net_amount": 1000.0, "refund_rate": 0.15}
+            ],
+            "by_refund": [
+                {"name": "高退口红", "sku_code": "SKU03", "gmv": 800.0, "refund_rate": 0.28, "net_amount": 576.0, "gmv_dod": 0.05}
+            ],
+        },
+        "anomalies": [
+            {
+                "rule_name": "大盘退款率超标",
+                "severity": "critical",
+                "scope": "overview",
+                "subject": "全盘",
+                "metric": "refund_rate",
+                "value": 0.25,
+                "threshold": 0.15,
+                "message": "大盘退款率达 25.0%，超过阈值 15.0%",
+            }
+        ],
+        "diagnosis": {
+            "primary_driver": "visitors",
+            "driver_label": "访客规模变动",
+            "explanation": "访客下降是主要驱动因素",
+            "contributions": {},
+        },
+    }
+    report_data = DailyReportData.model_validate(raw_data)
+
+    ctx = build_diagnosis_context(report_data)
+    assert "热销面霜: GMV 5,000 元, 环比 +35.0%" in ctx
+    assert "滞销眼影: GMV 1,200 元, 环比 -45.0%" in ctx
+    assert "高退口红: 退款率 28.0%, GMV 800 元" in ctx
+    assert "[CRITICAL] 大盘退款率超标" in ctx
+    assert "当前值: 0.25, 阈值: 0.15" in ctx
+

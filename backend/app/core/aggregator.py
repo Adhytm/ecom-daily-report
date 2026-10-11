@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 import math
 from typing import Any
 
@@ -33,10 +33,11 @@ _SUM_FIELDS = (
     "visitors",
     "ad_cost",
     "order_qty",
-    # 成本三件套：由 _enrich_costs 在装载后按行追加（非数据库列）
+    # 成本三件套与单行毛利：由 _enrich_costs 在装载后按行追加（非数据库列）
     "cogs",
     "platform_fee",
     "fulfillment_cost",
+    "gross_profit",
 )
 
 WEEKDAY_NAMES = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
@@ -98,19 +99,18 @@ def _metrics_for(sub: pd.DataFrame) -> dict[str, Decimal | None]:
     out["ad_cost_ratio"] = _div(ad_cost, net)
     out["unit_price"] = _div(net, sums["paid_qty"])
 
-    # ---- 利润链（规划外补充，2026-09）----
-    # 毛利 = 成交额 - 货成本 - 平台扣点 - 履约成本；经营利润 = 毛利 - 推广费。
-    # 子集中一行成本价都没有时 cogs 为 None → 毛利链整体为 None，
-    # 宁可空缺也不把「未知成本」当 0 虚报利润
-    cogs = sums["cogs"]
-    platform_fee = sums["platform_fee"]
-    fulfillment = sums["fulfillment_cost"]
-    if net is None or cogs is None:
-        gross = None
-    else:
-        gross = net - cogs - (platform_fee or _ZERO) - (fulfillment or _ZERO)
+    # ---- 利润链（精确核算）----
+    # 毛利只累加已知成本行；毛利率分母为对应有成本商品的实际成交额（covered_net）
+    # 彻底杜绝“总成交额减局部成本”导致的虚假暴利与虚高毛利率
+    gross = sums.get("gross_profit")
+    covered_net = None
+    if "cogs" in sub.columns and not sub.empty:
+        cov_sub = sub[sub["cogs"].notna()]
+        if not cov_sub.empty:
+            covered_net = _dec_sum(cov_sub["net_amount"])
+
     out["gross_profit"] = gross
-    out["gross_margin"] = _div(gross, net)
+    out["gross_margin"] = _div(gross, covered_net)
     out["operating_profit"] = None if gross is None else gross - (ad_cost or _ZERO)
     return out
 
@@ -223,6 +223,7 @@ def _enrich_costs(db: Session, df: pd.DataFrame, sku_map: dict[int, Sku]) -> pd.
         df["cogs"] = pd.Series(dtype=object)
         df["platform_fee"] = pd.Series(dtype=object)
         df["fulfillment_cost"] = pd.Series(dtype=object)
+        df["gross_profit"] = pd.Series(dtype=object)
         return df
 
     # 平台 → (扣点比例, 单件履约成本)，用户覆盖版适配器优先
@@ -240,6 +241,7 @@ def _enrich_costs(db: Session, df: pd.DataFrame, sku_map: dict[int, Sku]) -> pd.
     cogs_col: list[Decimal | None] = []
     fee_col: list[Decimal | None] = []
     ful_col: list[Decimal | None] = []
+    gp_col: list[Decimal | None] = []
     for sid, qty, net, platform in zip(
         df["sku_id"].tolist(),
         df["paid_qty"].tolist(),
@@ -252,23 +254,40 @@ def _enrich_costs(db: Session, df: pd.DataFrame, sku_map: dict[int, Sku]) -> pd.
             cost_price = sku.cost_price if sku is not None else None
         qty_dec = None if qty is None or pd.isna(qty) else Decimal(str(qty))
 
-        cogs_col.append(
-            (cost_price * qty_dec).quantize(_TWO_PLACES)
+        rate, per_unit = fee_map.get(platform, (_ZERO, _ZERO))
+        c_val = (
+            (cost_price * qty_dec).quantize(_TWO_PLACES, rounding=ROUND_HALF_UP)
             if cost_price is not None and qty_dec is not None
             else None
         )
-        rate, per_unit = fee_map.get(platform, (_ZERO, _ZERO))
-        fee_col.append(
-            (Decimal(net) * rate).quantize(_TWO_PLACES) if net is not None else None
+        f_val = (
+            (Decimal(net) * rate).quantize(_TWO_PLACES, rounding=ROUND_HALF_UP)
+            if net is not None
+            else None
         )
-        ful_col.append(
-            (qty_dec * per_unit).quantize(_TWO_PLACES) if qty_dec is not None else None
+        u_val = (
+            (qty_dec * per_unit).quantize(_TWO_PLACES, rounding=ROUND_HALF_UP)
+            if qty_dec is not None
+            else None
         )
+
+        cogs_col.append(c_val)
+        fee_col.append(f_val)
+        ful_col.append(u_val)
+
+        if net is not None and c_val is not None:
+            gp_val = (
+                Decimal(net) - c_val - (f_val or _ZERO) - (u_val or _ZERO)
+            ).quantize(_TWO_PLACES, rounding=ROUND_HALF_UP)
+        else:
+            gp_val = None
+        gp_col.append(gp_val)
 
     df = df.copy()
     df["cogs"] = cogs_col
     df["platform_fee"] = fee_col
     df["fulfillment_cost"] = ful_col
+    df["gross_profit"] = gp_col
     return df
 
 

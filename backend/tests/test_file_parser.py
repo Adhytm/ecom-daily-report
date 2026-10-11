@@ -520,3 +520,23 @@ def test_unsupported_extension_message_lists_all():
         _parse(b"abc", "data.pdf", _fm())
     assert "PDF" not in str(e.value)      # 不是支持格式
     assert ".csv" in str(e.value.detail.get("supported"))  # 支持清单可见
+
+
+def test_xlsx_merged_cells_propagation():
+    """验证 Excel 合并单元格自动向下/向右回填（防止大区/店铺/日期合并单元格丢失）。"""
+    wb = Workbook()
+    ws = wb.active
+    ws.append(["大区", "店铺", "支付金额"])
+    ws.append(["华东大区", "宁波店", "100"])
+    ws.append(["", "杭州店", "200"])
+    ws.append(["", "上海店", "300"])
+    ws.merge_cells("A2:A4")
+    buf = io.BytesIO()
+    wb.save(buf)
+    raw = buf.getvalue()
+
+    df, meta = _parse(raw, "shops.xlsx", _fm(auto_header_hints=["大区", "店铺", "支付金额"]))
+    assert len(df) == 3
+    assert list(df["大区"]) == ["华东大区", "华东大区", "华东大区"]
+    assert list(df["店铺"]) == ["宁波店", "杭州店", "上海店"]
+    assert list(df["支付金额"]) == ["100", "200", "300"]

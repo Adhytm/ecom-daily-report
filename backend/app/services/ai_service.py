@@ -82,24 +82,43 @@ def build_diagnosis_context(report_data: Any) -> str:
 
     lines.append("")
     lines.append("【商品异动榜单】:")
-    if report_data.top.by_growth:
+    top_dict = (
+        report_data.top
+        if isinstance(report_data.top, dict)
+        else (report_data.top.__dict__ if hasattr(report_data.top, "__dict__") else {})
+    )
+    by_growth = top_dict.get("by_growth") if isinstance(top_dict, dict) else getattr(report_data.top, "by_growth", [])
+    by_decline = top_dict.get("by_decline") if isinstance(top_dict, dict) else getattr(report_data.top, "by_decline", [])
+    by_refund = top_dict.get("by_refund") if isinstance(top_dict, dict) else getattr(report_data.top, "by_refund", [])
+
+    if by_growth:
         lines.append("- GMV 涨幅前列:")
-        for item in report_data.top.by_growth[:3]:
-            lines.append(f"  * {item.get('name') or item.get('sku_code')}: GMV {item.get('value', 0):,.0f} 元, 环比 {_fmt_pct(item.get('delta'))}")
-    if report_data.top.by_decline:
+        for item in by_growth[:3]:
+            label = item.get("name") or item.get("sku_code") or "未知商品"
+            gmv_val = item.get("gmv") or 0
+            dod_val = _fmt_pct(item.get("gmv_dod"))
+            lines.append(f"  * {label}: GMV {gmv_val:,.0f} 元, 环比 {dod_val}")
+    if by_decline:
         lines.append("- GMV 跌幅前列:")
-        for item in report_data.top.by_decline[:3]:
-            lines.append(f"  * {item.get('name') or item.get('sku_code')}: GMV {item.get('value', 0):,.0f} 元, 环比 {_fmt_pct(item.get('delta'))}")
-    if report_data.top.by_refund:
+        for item in by_decline[:3]:
+            label = item.get("name") or item.get("sku_code") or "未知商品"
+            gmv_val = item.get("gmv") or 0
+            dod_val = _fmt_pct(item.get("gmv_dod"))
+            lines.append(f"  * {label}: GMV {gmv_val:,.0f} 元, 环比 {dod_val}")
+    if by_refund:
         lines.append("- 退款率偏高关注:")
-        for item in report_data.top.by_refund[:3]:
-            lines.append(f"  * {item.get('name') or item.get('sku_code')}: 退款率 {(item.get('value', 0) * 100):.1f}%, GMV {item.get('base_value', 0):,.0f} 元")
+        for item in by_refund[:3]:
+            label = item.get("name") or item.get("sku_code") or "未知商品"
+            ref_rate = (item.get("refund_rate") or 0) * 100
+            gmv_val = item.get("gmv") or 0
+            lines.append(f"  * {label}: 退款率 {ref_rate:.1f}%, GMV {gmv_val:,.0f} 元")
 
     lines.append("")
     lines.append("【系统异常预警项】:")
     if report_data.anomalies:
         for a in report_data.anomalies:
-            lines.append(f"- [{a.severity.upper()}] {a.rule_name}: {a.message} (当前值: {a.actual_value}, 阈值: {a.threshold})")
+            curr_val = f"{a.value:.2f}" if a.value is not None else "—"
+            lines.append(f"- [{a.severity.upper()}] {a.rule_name}: {a.message} (当前值: {curr_val}, 阈值: {a.threshold})")
     else:
         lines.append("- 今日未触发红线异常预警。")
 

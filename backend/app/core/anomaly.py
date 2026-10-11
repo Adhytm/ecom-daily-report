@@ -79,9 +79,14 @@ def evaluate_rule(rule, subject: str, ctx: dict[str, Any]) -> dict | None:
 
     value = ctx.get(metric)
     base_gmv = ctx.get("gmv") or Decimal("0")
+    ad_cost = ctx.get("ad_cost") or Decimal("0")
     if value is None:
         return None
-    if base_gmv < Decimal(str(rule.min_base)):
+    min_base_dec = Decimal(str(rule.min_base))
+    if metric in ("roi", "ad_cost_ratio"):
+        if max(base_gmv, ad_cost) < min_base_dec:
+            return None
+    elif base_gmv < min_base_dec:
         return None
 
     threshold = float(rule.threshold)

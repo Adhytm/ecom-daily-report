@@ -168,12 +168,14 @@ def _pick_sheet(wb, matching: FileMatching, warnings: list[str]):
 def _read_xlsx_rows(
     raw: bytes, matching: FileMatching, warnings: list[str]
 ) -> tuple[list[list], str, list[str]]:
-    """openpyxl 只读模式读取工作表全部行（值一律转字符串）。
+    """openpyxl 读取工作表全部行（值一律转字符串）。
 
+    支持合并单元格值智能回填：将合并区域左上角的值自动回填到区域内全部单元格，
+    避免常见的大区/店铺/日期合并单元格在后续行读为 None 导致维度丢失或空行被弃。
     返回 (rows, 实际读取的工作表名, 文件内全部工作表名)。
     """
     try:
-        wb = load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
+        wb = load_workbook(io.BytesIO(raw), data_only=True)
     except Exception as e:  # noqa: BLE001 — 统一收敛为业务错误
         raise FileParseError(
             "无法读取该 Excel 文件：文件可能已损坏，或其实是老式 .xls 格式"
@@ -182,10 +184,23 @@ def _read_xlsx_rows(
         ) from e
     try:
         ws = _pick_sheet(wb, matching, warnings)
-        rows = [
-            ["" if v is None else str(v) for v in row]
-            for row in ws.iter_rows(values_only=True)
-        ]
+        merged_map: dict[tuple[int, int], Any] = {}
+        if ws.merged_cells:
+            for rng in list(ws.merged_cells.ranges):
+                top_val = ws.cell(row=rng.min_row, column=rng.min_col).value
+                for r in range(rng.min_row, rng.max_row + 1):
+                    for c in range(rng.min_col, rng.max_col + 1):
+                        merged_map[(r, c)] = top_val
+
+        rows: list[list[str]] = []
+        for r_idx, row in enumerate(ws.iter_rows(values_only=True), start=1):
+            row_vals: list[str] = []
+            for c_idx, val in enumerate(row, start=1):
+                if val is None and (r_idx, c_idx) in merged_map:
+                    val = merged_map[(r_idx, c_idx)]
+                row_vals.append("" if val is None else str(val))
+            rows.append(row_vals)
+
         return rows, ws.title, list(wb.sheetnames)
     finally:
         wb.close()

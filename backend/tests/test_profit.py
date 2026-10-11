@@ -71,16 +71,18 @@ def _override_taobao_fee(db_session, rate: str, per_unit: str) -> None:
 
 
 def test_profit_chain_default(profit_dataset, db_session):
-    """默认配置（扣点 0、履约 0）：毛利 = 成交额 - 货成本。"""
+    """默认配置（扣点 0、履约 0）：毛利按已知成本商品核算（杜绝将未映射商品按0成本虚构暴利）。"""
     report = build_daily_report(db_session, D0)
     ov = report["overview"]
 
-    # 成交额 1200；货成本仅 SKU1 部分 = 30×10 = 300（B1 未映射不计）
+    # 成交额 1200；已核算成本商品(SKU1)成交额 900，货成本 = 30×10 = 300（B1 未映射不计入已核算毛利）
     assert ov["net_amount"]["value"] == 1200.0
-    assert ov["gross_profit"]["value"] == pytest.approx(900.0)
-    assert ov["gross_margin"]["value"] == pytest.approx(0.75)
-    # 经营利润 = 900 - 推广 50 = 850
-    assert ov["operating_profit"]["value"] == pytest.approx(850.0)
+    # 毛利仅计入成本已知的 SKU1：900 - 300 = 600
+    assert ov["gross_profit"]["value"] == pytest.approx(600.0)
+    # 毛利率分母为有成本商品的成交额 900：600 / 900 = 66.67%（四位小数 0.6667）
+    assert ov["gross_margin"]["value"] == pytest.approx(0.6667, abs=1e-4)
+    # 经营利润 = 600 - 推广 50 = 550
+    assert ov["operating_profit"]["value"] == pytest.approx(550.0)
 
     # 成本覆盖率 = 900/1200 = 0.75，且必须给出警告
     dc = report["data_completeness"]
@@ -94,10 +96,10 @@ def test_profit_chain_default(profit_dataset, db_session):
 
 
 def test_profit_dod_compare(profit_dataset, db_session):
-    """毛利环比同口径：昨日毛利 = 720 - 30×8 = 480，今日 900 → +87.5%。"""
+    """毛利环比同口径：昨日毛利 = 720 - 30×8 = 480，今日毛利 600 → +25.0%。"""
     report = build_daily_report(db_session, D0)
     ov = report["overview"]
-    assert ov["gross_profit"]["dod"] == pytest.approx((900 - 480) / 480, abs=1e-3)
+    assert ov["gross_profit"]["dod"] == pytest.approx((600 - 480) / 480, abs=1e-3)
 
 
 def test_profit_with_fee_override(profit_dataset, db_session):
@@ -106,10 +108,10 @@ def test_profit_with_fee_override(profit_dataset, db_session):
     report = build_daily_report(db_session, D0)
     ov = report["overview"]
 
-    # 毛利 = 1200 - 300 - 90（900×0.1）- 20（10×2）= 790
-    assert ov["gross_profit"]["value"] == pytest.approx(790.0)
-    # 经营利润 = 790 - 50 = 740
-    assert ov["operating_profit"]["value"] == pytest.approx(740.0)
+    # SKU1 毛利 = 900 - 300 - 90（900×0.1）- 20（10×2）= 490
+    assert ov["gross_profit"]["value"] == pytest.approx(490.0)
+    # 经营利润 = 490 - 50 = 440
+    assert ov["operating_profit"]["value"] == pytest.approx(440.0)
 
 
 def test_profit_none_without_any_cost(db_session):

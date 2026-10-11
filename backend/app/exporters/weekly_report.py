@@ -111,9 +111,9 @@ def generate_weekly_excel_report(data: dict, out_dir: Path, company: str = "XX")
         ("退款总金额", data["total_refund_amount"], data["prev_refund_amount"], data["wow_refund_amount"], FMT_MONEY, False, "本周全平台申请并成立的退款总额"),
         ("平均退款率", data["total_refund_rate"], data["prev_refund_rate"], data["wow_refund_rate_pp"], FMT_PCT, True, "退款金额 / GMV，环比为百分点差值"),
         ("到手综合毛利", data["total_gross_profit"], data["prev_gross_profit"], data["wow_gross_profit"], FMT_MONEY, False, "实际成交额 − 货品成本 − 平台扣点 − 运费险"),
-        ("综合毛利率", data["total_gross_margin"], data["prev_gross_margin"], data["wow_gross_margin_pp"], FMT_PCT, True, "毛利 / 实际成交额，环比为百分点差值"),
+        ("综合毛利率", data["total_gross_margin"], data["prev_gross_margin"], data["wow_gross_margin_pp"], FMT_PCT, True, "毛利 / 已核算成本商品成交额，环比为百分点差值"),
         ("累计支付件数", data["total_paid_qty"], data["prev_paid_qty"], data["wow_paid_qty"], FMT_INT, False, "本周全渠道订单售出总件数"),
-        ("周平均客单价", data["avg_order_value"], data["prev_avg_order_value"], data["wow_avg_order_value"], FMT_MONEY, False, "实际成交额 / 支付件数"),
+        ("周平均客单价", data["avg_order_value"], data["prev_avg_order_value"], data["wow_avg_order_value"], FMT_MONEY, False, "实际成交额 / 支付买家数（缺买家数时退化为件单价）"),
         ("全店推广 ROI", data["total_roi"], data["prev_roi"], data["wow_roi"], "0.00", False, "实际成交额 / 推广总花费"),
     ]
 

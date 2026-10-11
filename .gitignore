@@ -27,6 +27,12 @@ htmlcov/
 # 运行时数据（规划第 3 节：data/ 运行时生成）
 data/
 !data/.gitkeep
+# 便携版运行时数据与生成物
+portable/core/data/
+portable/输入表格放这里/*
+!portable/输入表格放这里/.gitkeep
+portable/生成的报表在里头/*
+!portable/生成的报表在里头/.gitkeep
 # 演示跑批产物（含 app.db、导出的 xlsx）
 .demo_run/
 # 模拟生成文件（可随时重新生成）

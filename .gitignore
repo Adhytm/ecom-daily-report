@@ -30,21 +30,20 @@ data/
 # 演示跑批产物（含 app.db、导出的 xlsx）
 .demo_run/
 # 模拟生成文件（可随时重新生成）
-samples/mock/
+**/samples/mock/
 
 # ---------- 内部工具痕迹（与项目本身无关）----------
-# AI 编码工具的草稿、截图、日志（可能是其它项目的调试残留）
+.qoder/
 .qoder-tmp/
-# AI 编码工具的项目记忆 / 决策记录（内部笔记，不适合公开）
 .workbuddy/
 
 # ---------- 前端 ----------
-node_modules/
-frontend/dist/
-backend/app/static/
-!backend/app/static/.gitkeep
+**/node_modules/
+**/frontend/dist/
+**/backend/app/static/
+!**/backend/app/static/.gitkeep
 # Vite 依赖预构建时落下的临时配置快照
-frontend/vite.config.js.timestamp-*
+**/vite.config.js.timestamp-*
 
 # ---------- 编辑器 / 系统 ----------
 .idea/

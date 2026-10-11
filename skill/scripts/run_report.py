@@ -24,8 +24,12 @@ SKILL_DIR = SCRIPT_DIR.parent
 ROOT_DIR = SKILL_DIR.parent
 SOURCE_DIR = ROOT_DIR / "source"
 
-if str(SOURCE_DIR) not in sys.path:
-    sys.path.insert(0, str(SOURCE_DIR))
+if (SKILL_DIR / "backend").exists():
+    if str(SKILL_DIR) not in sys.path:
+        sys.path.insert(0, str(SKILL_DIR))
+elif SOURCE_DIR.exists():
+    if str(SOURCE_DIR) not in sys.path:
+        sys.path.insert(0, str(SOURCE_DIR))
 
 
 def main():

@@ -27,9 +27,13 @@ PORTABLE_DIR = CORE_DIR.parent
 ROOT_DIR = PORTABLE_DIR.parent
 SOURCE_DIR = ROOT_DIR / "source"
 
-# 将 source 目录加入模块搜索路径
-if str(SOURCE_DIR) not in sys.path:
-    sys.path.insert(0, str(SOURCE_DIR))
+# 智能加入模块搜索路径（优先独立包内的 backend，其次单仓开发时的 source/backend）
+if (CORE_DIR / "backend").exists():
+    if str(CORE_DIR) not in sys.path:
+        sys.path.insert(0, str(CORE_DIR))
+elif SOURCE_DIR.exists():
+    if str(SOURCE_DIR) not in sys.path:
+        sys.path.insert(0, str(SOURCE_DIR))
 
 # 便携版默认自包含目录
 DATA_DIR = PORTABLE_DIR / "core" / "data"

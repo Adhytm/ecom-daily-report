@@ -33,6 +33,8 @@ portable/输入表格放这里/*
 !portable/输入表格放这里/.gitkeep
 portable/生成的报表在里头/*
 !portable/生成的报表在里头/.gitkeep
+# Release 打包产物
+dist/
 # 演示跑批产物（含 app.db、导出的 xlsx）
 .demo_run/
 # 模拟生成文件（可随时重新生成）

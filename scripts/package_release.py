@@ -86,9 +86,13 @@ def build_all_in_one_zip(version: str) -> Path:
     backend_dest = core_dest / "backend"
     shutil.copytree(backend_src, backend_dest, ignore=_ignore_patterns)
 
-    # 5. 复制 requirements.txt 到 core
-    if (backend_src / "requirements.txt").exists():
-        shutil.copy2(backend_src / "requirements.txt", core_dest / "requirements.txt")
+    # 5. 复制完全精确锁定的依赖清单到 core，严守 Zero-Floating 准则，杜绝供应链投毒
+    if (PORTABLE_DIR / "core" / "requirements.txt").exists():
+        shutil.copy2(PORTABLE_DIR / "core" / "requirements.txt", core_dest / "requirements.txt")
+    elif (backend_src / "requirements.lock").exists():
+        shutil.copy2(backend_src / "requirements.lock", core_dest / "requirements.txt")
+    if (backend_src / "requirements.lock").exists():
+        shutil.copy2(backend_src / "requirements.lock", backend_dest / "requirements.lock")
 
     # 6. 集成 skill 文件夹到总包内
     skill_dest = build_tmp / "skill"

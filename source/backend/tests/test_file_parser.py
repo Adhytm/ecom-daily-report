@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+from pathlib import Path
 
 import pytest
 from openpyxl import Workbook
@@ -313,20 +314,24 @@ def test_xlsx_renamed_as_xls_still_works():
 
 
 def test_real_xls_end_to_end():
-    """用 xlwt 造一个真 BIFF .xls → 应完整解析（P0-1 端到端）。"""
-    xlwt = pytest.importorskip("xlwt")
+    """验证老式 BIFF .xls 格式能完整解析（P0-1 端到端）。"""
+    fixture_path = Path(__file__).parent / "fixtures" / "sample_biff8.xls"
+    if fixture_path.exists():
+        raw_bytes = fixture_path.read_bytes()
+    else:
+        xlwt = pytest.importorskip("xlwt")
+        book = xlwt.Workbook()
+        ws = book.add_sheet("数据")
+        for r, row in enumerate(
+            [["统计时间", "商品ID", "支付金额"], ["2026-09-06", "S1", "10"]]
+        ):
+            for c, v in enumerate(row):
+                ws.write(r, c, v)
+        buf = io.BytesIO()
+        book.save(buf)
+        raw_bytes = buf.getvalue()
 
-    book = xlwt.Workbook()
-    ws = book.add_sheet("数据")
-    for r, row in enumerate(
-        [["统计时间", "商品ID", "支付金额"], ["2026-09-06", "S1", "10"]]
-    ):
-        for c, v in enumerate(row):
-            ws.write(r, c, v)
-    buf = io.BytesIO()
-    book.save(buf)
-
-    df, meta = _parse(buf.getvalue(), "真老式.xls", _fm())
+    df, meta = _parse(raw_bytes, "真老式.xls", _fm())
     assert meta.encoding == "xls"
     assert len(df) == 1
     assert df.iloc[0]["商品ID"] == "S1"

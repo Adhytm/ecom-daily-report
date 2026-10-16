@@ -38,8 +38,8 @@ from backend.app.schemas.upload import (
     UploadPreviewItem,
 )
 
-# 原始文件存放目录（供"改选平台后重新解析"与提交时复用）
-_UPLOADS_DIR = PROJECT_ROOT / "data" / "uploads"
+# 原始文件存放目录（供"改选平台后重新解析"与提交时复用；默认由 settings.uploads_dir 决定）
+_UPLOADS_DIR = settings.uploads_dir
 
 _SAFE_NAME_RE = re.compile(r"[^\w.\-\u4e00-\u9fff]+")
 

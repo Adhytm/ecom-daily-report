@@ -5,6 +5,8 @@
 - COMPANY_NAME       日报与摘要中的公司名（默认 "XX"）
 - SUMMARY_USE_WAN    摘要中金额 >= 1 万时是否使用万元简写（默认 true）
 - EXPORT_DIR         导出文件目录（默认 <项目根>/data/exports）
+- INCOMING_DIR       外部导入监控目录（默认 <项目根>/data/incoming）
+- UPLOADS_DIR        上传文件存储目录（默认 <项目根>/data/uploads）
 - CORS_ORIGINS       允许的跨域来源，JSON 数组格式（开发模式含 http://localhost:5173）
 """
 
@@ -40,6 +42,10 @@ class Settings(BaseSettings):
     incoming_dir: Path = Field(
         default=PROJECT_ROOT / "data" / "incoming",
         validation_alias="INCOMING_DIR",
+    )
+    uploads_dir: Path = Field(
+        default=PROJECT_ROOT / "data" / "uploads",
+        validation_alias="UPLOADS_DIR",
     )
 
     # 日报文案

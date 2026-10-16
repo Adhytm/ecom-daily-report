@@ -39,12 +39,28 @@ def main():
     parser.add_argument("--section", type=str, default="all",
                         choices=["all", "overview", "anomalies", "platforms", "skus"],
                         help="查询区块：all(全量), overview(大盘概览), anomalies(异常预警), platforms(分平台), skus(SKU排行)")
-    parser.add_argument("--db-path", type=str, default=str(ROOT_DIR / "portable" / "core" / "data" / "portable.db"),
-                        help="SQLite 数据库文件路径")
+    parser.add_argument("--db-path", type=str, default=None,
+                        help="SQLite 数据库文件路径，缺省时自动探测")
 
     args = parser.parse_args()
 
-    db_path = Path(args.db_path).resolve()
+    if args.db_path:
+        db_path = Path(args.db_path).resolve()
+    else:
+        # 智能探测已存在且有内容的可用数据库
+        candidates = [
+            ROOT_DIR / "portable" / "core" / "data" / "portable.db",
+            ROOT_DIR / "data" / "app.db",
+            SOURCE_DIR / "data" / "app.db",
+        ]
+        db_path = None
+        for cand in candidates:
+            if cand.is_file() and cand.stat().st_size > 0:
+                db_path = cand.resolve()
+                break
+        if db_path is None:
+            db_path = (ROOT_DIR / "portable" / "core" / "data" / "portable.db").resolve()
+
     if not db_path.exists():
         print(json.dumps({"ok": False, "error": f"数据库不存在: {db_path}"}, ensure_ascii=False))
         sys.exit(1)
@@ -72,13 +88,20 @@ def main():
 
         if args.section in ["all", "overview"]:
             res["overview"] = report_data.get("overview", {})
-            res["attribution"] = report_data.get("attribution_hint", "")
+            diag = report_data.get("diagnosis") or {}
+            res["attribution"] = diag.get("explanation", "") or report_data.get("attribution_hint", "")
         if args.section in ["all", "anomalies"]:
             res["anomalies"] = report_data.get("anomalies", [])
         if args.section in ["all", "platforms"]:
             res["by_platform"] = report_data.get("by_platform", [])
         if args.section in ["all", "skus"]:
-            res["by_sku_top10"] = report_data.get("by_sku", [])[:10]
+            by_sku = report_data.get("by_sku", {})
+            if isinstance(by_sku, dict):
+                res["by_sku_top10"] = by_sku.get("mapped", [])[:10]
+            elif isinstance(by_sku, list):
+                res["by_sku_top10"] = by_sku[:10]
+            else:
+                res["by_sku_top10"] = []
 
         print(json.dumps(res, ensure_ascii=False, indent=2))
 

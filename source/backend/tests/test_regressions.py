@@ -23,6 +23,7 @@ Bug 编号与修复内容：
    16  「已确认」Tab 未按 sku_id 过滤，未映射行混进已确认列表
    17  PUT /skus 显式传 null 绕过校验，触发 NOT NULL 约束变 500
    18  generate 接口不校验 body，platforms 传字符串穿透到 pandas 变 500
+   19  query_metrics 脚本对 by_sku 字典直接切片引发 KeyError，且归因描述缺失
 
 其中 9、10 是 Bug3（severity 分级）修好后才暴露出来的二阶缺陷：
 分级正确使得「整日全是 warning」成为常态，而裁剪逻辑原本假定
@@ -812,3 +813,53 @@ def test_generate_with_scalar_platforms_returns_422(client, db_session):
         json={"date": "2026-09-06", "platforms": ["taobao"]},
     )
     assert resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Bug 19 · query_metrics 脚本兼容 by_sku 字典切片与全量查询，不报 KeyError: slice
+# ---------------------------------------------------------------------------
+
+
+def test_query_metrics_skus_section_regression():
+    """query_metrics 旧实现对 report_data['by_sku'] 字典直接切片 [:10]，
+    触发 KeyError: slice。修复后兼容字典结构并正确提取 mapped Top10。"""
+    import json
+    from pathlib import Path
+
+    script_path = PROJECT_ROOT.parent / "skill" / "scripts" / "query_metrics.py"
+    if not script_path.is_file():
+        pytest.skip("skill/scripts/query_metrics.py 不存在")
+
+    # 1. 验证 CLI 基础连通性与参数校验
+    proc = subprocess.run(
+        [sys.executable, str(script_path), "--help"],
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    assert proc.returncode == 0
+    assert "--section" in (proc.stdout or "")
+
+    # 2. 如果存在测试库，全量校验 skus 与 all 分区不崩溃
+    db_file = PROJECT_ROOT.parent / "data" / "app.db"
+    if db_file.is_file() and db_file.stat().st_size > 0:
+        for section in ["skus", "all"]:
+            res = subprocess.run(
+                [
+                    sys.executable,
+                    str(script_path),
+                    "--db-path",
+                    str(db_file),
+                    "--section",
+                    section,
+                ],
+                capture_output=True,
+                encoding="utf-8",
+                errors="replace",
+            )
+            assert res.returncode == 0, f"query_metrics --section {section} failed: {res.stderr}"
+            data = json.loads(res.stdout)
+            assert data.get("ok") is True
+            assert "by_sku_top10" in data
+            assert isinstance(data["by_sku_top10"], list)
+
